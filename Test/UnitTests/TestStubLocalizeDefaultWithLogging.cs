@@ -10,6 +10,7 @@ using Xunit.Extensions.AssertExtensions;
 
 namespace Test.UnitTests;
 
+[Collection(LocalizationDatabaseTestCollection.Name)]
 public class TestStubLocalizeDefaultWithLogging
 {
     private readonly ITestOutputHelper _output;
