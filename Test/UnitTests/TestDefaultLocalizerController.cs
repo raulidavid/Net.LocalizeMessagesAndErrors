@@ -1,6 +1,7 @@
 ﻿// Copyright (c) 2022 Jon P Smith, GitHub: JonPSmith, web: http://www.thereformedprogrammer.net/
 // Licensed under MIT license. See License.txt in the project root for license information.
 
+using System;
 using System.Resources.NetStandard;
 using System.Globalization;
 using System.Threading;
@@ -15,9 +16,12 @@ using Xunit.Abstractions;
 
 namespace Test.UnitTests;
 
-public class TestDefaultLocalizerController
+[Collection(LocalizationDatabaseTestCollection.Name)]
+public class TestDefaultLocalizerController : IDisposable
 {
     private readonly ITestOutputHelper _output;
+    private readonly CultureInfo _originalCulture = Thread.CurrentThread.CurrentCulture;
+    private readonly CultureInfo _originalUiCulture = Thread.CurrentThread.CurrentUICulture;
 
     //see https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/testing#unit-testing-controllers
     //for testing the return of a controller action
@@ -26,6 +30,14 @@ public class TestDefaultLocalizerController
     public TestDefaultLocalizerController(ITestOutputHelper output)
     {
         _output = output;
+        Thread.CurrentThread.CurrentCulture = new CultureInfo("en-GB");
+        Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-GB");
+    }
+
+    public void Dispose()
+    {
+        Thread.CurrentThread.CurrentCulture = _originalCulture;
+        Thread.CurrentThread.CurrentUICulture = _originalUiCulture;
     }
 
     [Fact]
@@ -34,7 +46,6 @@ public class TestDefaultLocalizerController
         //SETUP
         var logLocalizer = new StubDefaultLocalizerWithLogging<HomeController>("en");
         var controller = new DefaultLocalizerController(logLocalizer);
-        Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-GB");
 
         //ATTEMPT
         var actionResult = controller.Index();
@@ -51,7 +62,6 @@ public class TestDefaultLocalizerController
         //SETUP
         var logLocalizer = new StubDefaultLocalizerWithLogging<HomeController>("en");
         var controller = new DefaultLocalizerController(logLocalizer);
-        Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-GB");
 
         //ATTEMPT
         var actionResult = controller.StringMessage();
@@ -68,7 +78,6 @@ public class TestDefaultLocalizerController
         //SETUP
         var logLocalizer = new StubDefaultLocalizerWithLogging<HomeController>("en");
         var controller = new DefaultLocalizerController(logLocalizer);
-        Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-GB");
 
         //ATTEMPT
         var actionResult = controller.MissingResourceEntry();

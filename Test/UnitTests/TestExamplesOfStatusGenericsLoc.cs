@@ -13,16 +13,29 @@ using Xunit.Extensions.AssertExtensions;
 
 namespace Test.UnitTests;
 
-public class TestExamplesOfStatusGenericsLoc
+[Collection(LocalizationDatabaseTestCollection.Name)]
+public class TestExamplesOfStatusGenericsLoc : IDisposable
 {
+    private readonly CultureInfo _originalCulture = Thread.CurrentThread.CurrentCulture;
+    private readonly CultureInfo _originalUiCulture = Thread.CurrentThread.CurrentUICulture;
 
+    public TestExamplesOfStatusGenericsLoc()
+    {
+        Thread.CurrentThread.CurrentCulture = new CultureInfo("en-GB");
+        Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-GB");
+    }
+
+    public void Dispose()
+    {
+        Thread.CurrentThread.CurrentCulture = _originalCulture;
+        Thread.CurrentThread.CurrentUICulture = _originalUiCulture;
+    }
 
     [Fact]
     public void TestCheckNull_Success()
     {
         //SETUP
         var stubDefaultLoc = new StubDefaultLocalizerWithLogging<HomeController>("en");
-        Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-GB");
 
         var service = new ExamplesOfStatusGenericsLoc<HomeController>(stubDefaultLoc);
 
@@ -39,7 +52,6 @@ public class TestExamplesOfStatusGenericsLoc
     {
         //SETUP
         var stubDefaultLoc = new StubDefaultLocalizerWithLogging<HomeController>("en");
-        Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-GB");
 
         var service = new ExamplesOfStatusGenericsLoc<HomeController>(stubDefaultLoc);
 
@@ -58,7 +70,6 @@ public class TestExamplesOfStatusGenericsLoc
     {
         //SETUP
         var stubDefaultLoc = new StubDefaultLocalizerWithLogging<HomeController>("en");
-        Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-GB");
 
         var service = new ExamplesOfStatusGenericsLoc<HomeController>(stubDefaultLoc);
 
@@ -76,7 +87,6 @@ public class TestExamplesOfStatusGenericsLoc
     {
         //SETUP
         var stubDefaultLoc = new StubDefaultLocalizerWithLogging<HomeController>("en");
-        Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-GB");
 
         var service = new ExamplesOfStatusGenericsLoc<HomeController>(stubDefaultLoc);
 
@@ -95,7 +105,6 @@ public class TestExamplesOfStatusGenericsLoc
     {
         //SETUP
         var stubDefaultLoc = new StubDefaultLocalizerWithLogging<HomeController>("en");
-        Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-GB");
 
         var service = new ExamplesOfStatusGenericsLoc<HomeController>(stubDefaultLoc);
 
@@ -116,7 +125,6 @@ public class TestExamplesOfStatusGenericsLoc
     {
         //SETUP
         var stubDefaultLoc = new StubDefaultLocalizerWithLogging<HomeController>("en");
-        Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-GB");
 
         var service = new ExamplesOfStatusGenericsLoc<HomeController>(stubDefaultLoc);
 
