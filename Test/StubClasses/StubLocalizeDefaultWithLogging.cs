@@ -17,8 +17,8 @@ namespace Test.StubClasses;
 /// returns the the default message.
 /// It also writes the information on each localized message to a database is the appsettings.json
 /// file in your testing project contains "SaveLocalizesToDb": true.
-/// If "SaveLocalizesToDb" is True, then there needs to be a connection string called "LocalizationCaptureDb"
-/// which links to a SQL Server database server where the localized message information is saved to.
+/// If "SaveLocalizesToDb" is True, localized message information is saved to the portable SQLite
+/// capture database configured by the testing project.
 /// </summary>
 public class StubDefaultLocalizerWithLogging : IDefaultLocalizer
 {
@@ -95,8 +95,9 @@ public class StubDefaultLocalizerWithLogging : IDefaultLocalizer
     /// This adds information on each localized message, including where it was sent from,
     /// so that you can see what localized messages in your app. Usually you would use the
     /// <see cref="StubDefaultLocalizerWithLogging{TResource}"/> within your unit tests.
-    /// It tries to: 
-    /// 1) Add a new entry in the database if there isn't an entry containing the same information.
+    /// It tries to:
+    /// 1) Add a new entry to the in-memory log and, when capture is enabled, the database if there
+    ///    isn't already an entry containing the same information.
     /// 2) If two or more entries have the same key but a different format then the
     /// <see cref="LocalizedLog"/>.<see cref="LocalizedLog.PossibleErrors"/> will contain an error
     /// if an existing entry with the same ResourceFile / LocalizeKey, but a different different message.
@@ -104,17 +105,29 @@ public class StubDefaultLocalizerWithLogging : IDefaultLocalizer
     /// <param name="localizedLog"></param>
     private void SaveLocalizationToDb(LocalizedLog localizedLog)
     {
-        
         using var context = GetLocalizationCaptureDbInstance();
-        if (context == null)
-            return;
 
-        //This will hold any existing database entries that have the same ResourceFile and LocalizeKey or format
-        var sameKeyOrFormat = context.LocalizedData!
-            .Where(x => x.ResourceClassFullName == localizedLog.ResourceClassFullName
-                        && (x.LocalizeKey == localizedLog.LocalizeKey 
-                            || (x.MessageFormat != null && x.MessageFormat != localizedLog.MessageFormat) 
-                            || (x.MessageFormat == null && x.ActualMessage != localizedLog.ActualMessage))).ToList();
+        bool HasSameKeyOrFormat(LocalizedLog existing) =>
+            existing.ResourceClassFullName == localizedLog.ResourceClassFullName
+            && (existing.LocalizeKey == localizedLog.LocalizeKey
+                || (existing.MessageFormat != null && existing.MessageFormat != localizedLog.MessageFormat)
+                || (existing.MessageFormat == null && existing.ActualMessage != localizedLog.ActualMessage));
+
+        // Logs already contains the current entry, so exclude it while checking previous calls.
+        // This keeps unit-test behavior independent of any database provider or operating system.
+        var sameKeyOrFormat = Logs.Take(Math.Max(0, Logs.Count - 1))
+            .Where(HasSameKeyOrFormat)
+            .ToList();
+
+        if (context != null)
+        {
+            sameKeyOrFormat.AddRange(context.LocalizedData!
+                .Where(x => x.ResourceClassFullName == localizedLog.ResourceClassFullName
+                            && (x.LocalizeKey == localizedLog.LocalizeKey
+                                || (x.MessageFormat != null && x.MessageFormat != localizedLog.MessageFormat)
+                                || (x.MessageFormat == null && x.ActualMessage != localizedLog.ActualMessage)))
+                .ToList());
+        }
 
         PossibleError = null;
 
@@ -144,6 +157,9 @@ public class StubDefaultLocalizerWithLogging : IDefaultLocalizer
 
         //set the SameKey before writing to the database
         localizedLog.PossibleErrors = PossibleError;
+
+        if (context == null)
+            return;
 
         context.Add(localizedLog);
         context.SaveChanges();
@@ -179,13 +195,14 @@ public class StubDefaultLocalizerWithLogging : IDefaultLocalizer
         if (!turnOnManually && config["SaveLocalizesToDb"] != "True")
             return null;
 
-        var connectionString = config.GetConnectionString("LocalizationCaptureDb");
-        if (connectionString == null)
-            throw new Exception("The ConnectionString: 'LocalizationCaptureDd' must be added to the appsettings file to make this work.");
+        var connectionString = Environment.GetEnvironmentVariable("LOCALIZATION_CAPTURE_CONNECTION_STRING")
+                               ?? config.GetConnectionString("LocalizationCaptureDb");
+        if (string.IsNullOrWhiteSpace(connectionString))
+            throw new InvalidOperationException("The ConnectionStrings:LocalizationCaptureDb setting is required to capture localization messages.");
 
         var optionsBuilder =
             new DbContextOptionsBuilder<LocalizationCaptureDb>();
-        optionsBuilder.UseSqlServer(connectionString);
+        optionsBuilder.UseSqlite(connectionString);
 
         var context = new LocalizationCaptureDb(optionsBuilder.Options);
         context.Database.EnsureCreated();
@@ -198,7 +215,8 @@ public class StubDefaultLocalizerWithLogging : IDefaultLocalizer
         if (context == null) 
             return;
 
-        context.Database.EnsureClean();
+        context.Database.EnsureDeleted();
+        context.Database.EnsureCreated();
     }
 
     public List<LocalizedLog> ListLocalizationCaptureDb()

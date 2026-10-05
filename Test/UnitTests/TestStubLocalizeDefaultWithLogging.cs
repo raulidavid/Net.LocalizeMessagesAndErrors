@@ -2,6 +2,9 @@
 // Licensed under MIT license. See License.txt in the project root for license information.
 
 using LocalizeMessagesAndErrors;
+using Microsoft.Data.Sqlite;
+using System;
+using System.IO;
 using System.Linq;
 using Test.StubClasses;
 using Xunit;
@@ -105,5 +108,36 @@ public class TestStubLocalizeDefaultWithLogging
         //VERIFY
         _output.WriteLine(stubLocalizer.PossibleError ?? "- no error -");
         stubLocalizer.PossibleError.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void LocalizationCaptureDatabase_UsesPortableSqlite()
+    {
+        var previousConnectionString = Environment.GetEnvironmentVariable("LOCALIZATION_CAPTURE_CONNECTION_STRING");
+        var temporaryDirectory = Path.Combine(Path.GetTempPath(), $"localization-capture-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(temporaryDirectory);
+        var databasePath = Path.Combine(temporaryDirectory, "capture.db");
+        Environment.SetEnvironmentVariable("LOCALIZATION_CAPTURE_CONNECTION_STRING", $"Data Source={databasePath}");
+
+        try
+        {
+            var stubLocalizer = new StubDefaultLocalizerWithLogging("en", GetType());
+            using (var context = stubLocalizer.GetLocalizationCaptureDbInstance(true)!)
+            {
+                context.LocalizedData!.Add(new LocalizedLog(
+                    GetType(), "portable-capture", "en", "Captured message", null,
+                    nameof(TestStubLocalizeDefaultWithLogging), nameof(LocalizationCaptureDatabase_UsesPortableSqlite), 1));
+                context.SaveChanges();
+            }
+
+            var capturedLogs = stubLocalizer.ListLocalizationCaptureDb();
+            capturedLogs.Single().LocalizeKey.ShouldEqual("portable-capture");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("LOCALIZATION_CAPTURE_CONNECTION_STRING", previousConnectionString);
+            SqliteConnection.ClearAllPools();
+            Directory.Delete(temporaryDirectory, recursive: true);
+        }
     }
 }
