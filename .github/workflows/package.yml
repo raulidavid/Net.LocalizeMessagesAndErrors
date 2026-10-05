@@ -1,0 +1,72 @@
+name: Validate and publish NuGet package
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore Net.LocalizeMessagesAndErrors.sln
+
+      - name: Build
+        run: dotnet build Net.LocalizeMessagesAndErrors.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test Test/Test.csproj --configuration Release --no-build
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: validate
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up .NET and GitHub Packages authentication
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+          source-url: https://nuget.pkg.github.com/raulidavid/index.json
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify tag matches package version
+        shell: bash
+        run: |
+          package_version="$(dotnet msbuild LocalizeMessagesAndErrors/LocalizeMessagesAndErrors.csproj -getProperty:PackageVersion)"
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [[ "$tag_version" != "$package_version" ]]; then
+            echo "Tag v$tag_version does not match package version $package_version" >&2
+            exit 1
+          fi
+
+      - name: Restore library
+        run: dotnet restore LocalizeMessagesAndErrors/LocalizeMessagesAndErrors.csproj
+
+      - name: Build library
+        run: dotnet build LocalizeMessagesAndErrors/LocalizeMessagesAndErrors.csproj --configuration Release --no-restore -p:GeneratePackageOnBuild=false
+
+      - name: Pack library
+        run: dotnet pack LocalizeMessagesAndErrors/LocalizeMessagesAndErrors.csproj --configuration Release --no-build --no-restore
+
+      - name: Publish package to GitHub Packages
+        run: dotnet nuget push LocalizeMessagesAndErrors/bin/Release/*.nupkg --api-key "${{ secrets.GITHUB_TOKEN }}" --source https://nuget.pkg.github.com/raulidavid/index.json --skip-duplicate

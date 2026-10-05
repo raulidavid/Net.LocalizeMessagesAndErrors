@@ -99,15 +99,26 @@ public class TestSimpleLocalizer
     public void TestStaticLocalizeFormatted_Complex()
     {
         //SETUP
+        var originalCulture = Thread.CurrentThread.CurrentCulture;
+        var originalUiCulture = Thread.CurrentThread.CurrentUICulture;
+        Thread.CurrentThread.CurrentCulture = new CultureInfo("en-GB");
         Thread.CurrentThread.CurrentUICulture = new CultureInfo("en-GB");
 
-        //ATTEMPT
-        var message = _simpleLoc.StaticLocalizeFormatted($"My {Thread.CurrentThread.CurrentCulture.Name} message", typeof(MyStaticClass));
+        try
+        {
+            //ATTEMPT
+            var message = _simpleLoc.StaticLocalizeFormatted($"My {Thread.CurrentThread.CurrentCulture.Name} message", typeof(MyStaticClass));
 
-        //VERIFY
-        message.ShouldEqual("My en-GB message");
-        _stubDefaultLoc.LastKeyData.LocalizeKey.ShouldEqual("SimpleLocalizer(My {0} message)");
-        _stubDefaultLoc.LastKeyData.CallingClass.Name.ShouldEqual("MyStaticClass");
+            //VERIFY
+            message.ShouldEqual("My en-GB message");
+            _stubDefaultLoc.LastKeyData.LocalizeKey.ShouldEqual("SimpleLocalizer(My {0} message)");
+            _stubDefaultLoc.LastKeyData.CallingClass.Name.ShouldEqual("MyStaticClass");
+        }
+        finally
+        {
+            Thread.CurrentThread.CurrentCulture = originalCulture;
+            Thread.CurrentThread.CurrentUICulture = originalUiCulture;
+        }
     }
 
     [Fact]
