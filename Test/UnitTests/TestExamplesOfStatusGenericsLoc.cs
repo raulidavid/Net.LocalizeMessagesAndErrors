@@ -114,7 +114,8 @@ public class TestExamplesOfStatusGenericsLoc : IDisposable
         //VERIFY
         status.IsValid.ShouldBeTrue(status.GetAllErrors());
         status.Result.ShouldEqual(new DateTime(2000,4,1));
-        status.Message.ShouldEqual("Successfully created the date 01 April 2000.");
+        var expectedDateMessage = new DateTime(2000, 4, 1).ToString("D", CultureInfo.CurrentCulture);
+        status.Message.ShouldEqual($"Successfully created the date {expectedDateMessage}.");
     }
 
     [Theory]
