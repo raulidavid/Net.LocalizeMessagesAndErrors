@@ -1,5 +1,9 @@
 # Release Notes
 
+## 10.0.1
+
+- Remove unused scaffolding and build-time dependencies from the runtime package. This prevents NuGet client packages from being pulled into consumer dependency graphs.
+
 ## 10.0.0
 
 - .NET 10 version
