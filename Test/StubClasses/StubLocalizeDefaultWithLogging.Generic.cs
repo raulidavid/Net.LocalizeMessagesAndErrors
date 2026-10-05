@@ -16,8 +16,8 @@ namespace Test.StubClasses;
 /// returns the the default message.
 /// It also writes the information on each localized message to a database is the appsettings.json
 /// file in your testing project contains "SaveLocalizesToDb": true.
-/// If "SaveLocalizesToDb" is True, then there needs to be a connection string called "LocalizationCaptureDb"
-/// which links to a SQL Server database server where the localized message information is saved to.
+/// If "SaveLocalizesToDb" is True, localized message information is saved to the portable SQLite
+/// capture database configured by the testing project.
 /// </summary>
 /// <typeparam name="TResource"></typeparam>
 public class StubDefaultLocalizerWithLogging<TResource> : StubDefaultLocalizerWithLogging, IDefaultLocalizer<TResource>

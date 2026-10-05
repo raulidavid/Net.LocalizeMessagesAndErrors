@@ -5,5 +5,5 @@ namespace Test;
 [CollectionDefinition(Name)]
 public sealed class LocalizationDatabaseTestCollection
 {
-    public const string Name = "Localization capture database";
+    public const string Name = "Localization log tests";
 }
